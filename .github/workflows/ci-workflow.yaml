@@ -50,7 +50,8 @@ jobs:
 
       - name: Copy terragrunt.hcl to client-config-repo
         run: |
-          cp iac-repo/terragrunt/_common/*.* client-config-repo/_common/
+          mkdir -p client-config-repo/_common
+          cp -r iac-repo/terragrunt/_common/. client-config-repo/_common/
           cp iac-repo/terragrunt/$DIR_PATH/terragrunt.hcl client-config-repo/$DIR_PATH/terragrunt.hcl
 
       - name: Set cloud-specific secrets
