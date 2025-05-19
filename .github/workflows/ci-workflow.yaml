@@ -56,6 +56,7 @@ jobs:
 
       - name: Set cloud-specific secrets
         run: |
+          echo "Setting env for: $CLOUD_PROVIDER"
           if [[ "$CLOUD_PROVIDER" == "azure" ]]; then
             echo "CONFLUENT_API_KEY=${{ secrets.CONFLUENT_API_KEY }}" >> $GITHUB_ENV
             echo "CONFLUENT_API_SECRET=${{ secrets.CONFLUENT_API_SECRET }}" >> $GITHUB_ENV
@@ -70,6 +71,29 @@ jobs:
             echo "ARM_CLIENT_SECRET=${{ secrets.ARM_CLIENT_SECRET }}" >> $GITHUB_ENV
             echo "ARM_SUBSCRIPTION_ID=${{ secrets.ARM_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
             echo "ARM_TENANT_ID=${{ secrets.ARM_TENANT_ID }}" >> $GITHUB_ENV
+          elif [[ "$CLOUD_PROVIDER" == "gcp" ]]; then
+            echo "CONFLUENT_API_KEY=${{ secrets.CONFLUENT_API_KEY }}" >> $GITHUB_ENV
+            echo "CONFLUENT_API_SECRET=${{ secrets.CONFLUENT_API_SECRET }}" >> $GITHUB_ENV
+            echo "KAFKA_API_KEY=${{ secrets.KAFKA_API_KEY }}" >> $GITHUB_ENV
+            echo "KAFKA_API_SECRET=${{ secrets.KAFKA_API_SECRET }}" >> $GITHUB_ENV
+            echo "KAFKA_CLUSTER_ID=${{ secrets.KAFKA_CLUSTER_ID }}" >> $GITHUB_ENV
+            echo "KAFKA_REST_ENDPOINT=${{ secrets.KAFKA_REST_ENDPOINT }}" >> $GITHUB_ENV
+            echo "GOOGLE_CREDENTIALS=${{ secrets.GOOGLE_CREDENTIALS }}" >> $GITHUB_ENV
+            echo "GCP_BUCKET_NAME=${{ secrets.GCP_BUCKET_NAME }}" >> $GITHUB_ENV
+          elif [[ "$CLOUD_PROVIDER" == "aws" ]]; then
+            echo "CONFLUENT_API_KEY=${{ secrets.CONFLUENT_API_KEY }}" >> $GITHUB_ENV
+            echo "CONFLUENT_API_SECRET=${{ secrets.CONFLUENT_API_SECRET }}" >> $GITHUB_ENV
+            echo "KAFKA_API_KEY=${{ secrets.KAFKA_API_KEY }}" >> $GITHUB_ENV
+            echo "KAFKA_API_SECRET=${{ secrets.KAFKA_API_SECRET }}" >> $GITHUB_ENV
+            echo "KAFKA_CLUSTER_ID=${{ secrets.KAFKA_CLUSTER_ID }}" >> $GITHUB_ENV
+            echo "KAFKA_REST_ENDPOINT=${{ secrets.KAFKA_REST_ENDPOINT }}" >> $GITHUB_ENV
+            echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+            echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+            echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV
+            echo "S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}" >> $GITHUB_ENV
+          else
+            echo "Unsupported cloud provider: $CLOUD_PROVIDER"
+            exit 1
           fi
 
       - name: Setup Terraform
