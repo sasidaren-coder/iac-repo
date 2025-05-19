@@ -71,7 +71,12 @@ jobs:
             echo "ARM_TENANT_ID=${{ secrets.ARM_TENANT_ID }}" >> $GITHUB_ENV
           fi
 
-      - name: Install Terraform and Terragrunt
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+      
+      - name: Install Terragrunt
         run: |
           wget -q https://github.com/gruntwork-io/terragrunt/releases/download/v0.56.3/terragrunt_linux_amd64
           chmod +x terragrunt_linux_amd64
