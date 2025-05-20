@@ -12,7 +12,10 @@ on:
       env:
         required: true
         type: string
-      version:
+      use_pipeline_version:
+        required: true
+        type: string
+      prior_pipeline_version:
         required: true
         type: string
 
@@ -25,7 +28,8 @@ jobs:
       FILE_PATH: ${{ inputs.file }}
       CLOUD_PROVIDER: ${{ inputs.cloud }}
       ENV: ${{ inputs.env }}
-      IAC_VERSION: ${{ inputs.version }}
+      USE_PIPELINE_VERSION: ${{ inputs.use_pipeline_version }}
+      PRIOR_PIPELINE_VERSION: ${{ inputs.prior_pipeline_version }}
 
     steps:
       - name: Checkout client-config-repo
@@ -38,7 +42,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: sasidaren-coder/iac-repo
-          ref: v${{ inputs.version }}
+          ref: v${{ inputs.use_pipeline_version }}
           path: iac-repo
 
       - name: Set computed environment variables
