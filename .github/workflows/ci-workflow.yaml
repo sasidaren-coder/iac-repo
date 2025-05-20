@@ -20,6 +20,148 @@ on:
         type: string
 
 jobs:
+  check-migration_1:
+    runs-on: ubuntu-latest
+    outputs:
+      migration1_required: ${{ steps.detect.outputs.required1 }}
+    steps:
+      - name: Detect if migration is required
+        id: detect
+        run: |
+          if [[ "${{ inputs.prior_pipeline_version }}" == "null" || -z "${{ inputs.prior_pipeline_version }}" ]]; then
+            echo "required1=false" >> $GITHUB_OUTPUT
+          elif [[ "${{ inputs.prior_pipeline_version }}" == "${{ inputs.use_pipeline_version }}" ]]; then
+            echo "required1=false" >> $GITHUB_OUTPUT
+          else
+            echo "required1=true" >> $GITHUB_OUTPUT
+          fi
+          echo "Migration- Step1 required: ${{ steps.detect.outputs.required1 }}"
+  check-migration_2:
+    runs-on: ubuntu-latest
+    needs: check-migration_1
+    if: needs.check-migration_1.outputs.migration1_required == 'true'
+    outputs:
+      migration2_required: ${{ steps.detect.outputs.required2 }}
+    environment: ${{ inputs.env }}
+    env:
+      FILE_PATH: ${{ inputs.file }}
+      CLOUD_PROVIDER: ${{ inputs.cloud }}
+      ENV: ${{ inputs.env }}
+      USE_PIPELINE_VERSION: ${{ inputs.use_pipeline_version }}
+      PRIOR_PIPELINE_VERSION: ${{ inputs.prior_pipeline_version }}
+    steps:
+      - name: Checkout prior iac-repo
+        uses: actions/checkout@v4
+        with:
+          repository: sasidaren-coder/iac-repo
+          ref: v${{ inputs.prior_pipeline_version }}
+          path: prior_iac_repo
+
+      - name: Checkout current iac-repo
+        uses: actions/checkout@v4
+        with:
+          repository: sasidaren-coder/iac-repo
+          ref: v${{ inputs.use_pipeline_version }}
+          path: iac_repo
+
+      - name: Checkout client-config-repo
+        uses: actions/checkout@v4
+        with:
+          repository: sasidaren-coder/client-config-repo
+          path: client-config-repo
+
+      - name: Set computed environment variables
+        run: |
+          DIR_PATH=$(dirname "$FILE_PATH")
+          echo "DIR_PATH=$DIR_PATH" >> $GITHUB_ENV
+          echo "FILE_NAME=$(basename $FILE_PATH)" >> $GITHUB_ENV
+          echo "TOPIC_NAME=${FILE_NAME%.yaml}" >> $GITHUB_ENV
+
+      - name: Copy terragrunt.hcl to client-config-repo
+        run: |
+          mkdir -p client-config-repo/_common
+          cp -r prior_iac_repo/terragrunt/_common/. client-config-repo/_common/
+          cp prior_iac_repo/terragrunt/$DIR_PATH/terragrunt.hcl client-config-repo/$DIR_PATH/terragrunt.hcl
+
+      - name: Set cloud-specific secrets
+        run: |
+          echo "Setting env for: $CLOUD_PROVIDER"
+          if [[ "$CLOUD_PROVIDER" == "azure" ]]; then
+            echo "CONFLUENT_API_KEY=${{ secrets.CONFLUENT_API_KEY }}" >> $GITHUB_ENV
+            echo "CONFLUENT_API_SECRET=${{ secrets.CONFLUENT_API_SECRET }}" >> $GITHUB_ENV
+            echo "KAFKA_API_KEY=${{ secrets.KAFKA_API_KEY }}" >> $GITHUB_ENV
+            echo "KAFKA_API_SECRET=${{ secrets.KAFKA_API_SECRET }}" >> $GITHUB_ENV
+            echo "KAFKA_CLUSTER_ID=${{ secrets.KAFKA_CLUSTER_ID }}" >> $GITHUB_ENV
+            echo "KAFKA_REST_ENDPOINT=${{ secrets.KAFKA_REST_ENDPOINT }}" >> $GITHUB_ENV
+            echo "AZURE_RESOURCE_GROUP_NAME=${{ secrets.AZURE_RESOURCE_GROUP_NAME }}" >> $GITHUB_ENV
+            echo "AZURE_STORAGE_ACCOUNT_NAME=${{ secrets.AZURE_STORAGE_ACCOUNT_NAME }}" >> $GITHUB_ENV
+            echo "AZURE_CONTAINER_NAME=${{ secrets.AZURE_CONTAINER_NAME }}" >> $GITHUB_ENV
+            echo "ARM_CLIENT_ID=${{ secrets.ARM_CLIENT_ID }}" >> $GITHUB_ENV
+            echo "ARM_CLIENT_SECRET=${{ secrets.ARM_CLIENT_SECRET }}" >> $GITHUB_ENV
+            echo "ARM_SUBSCRIPTION_ID=${{ secrets.ARM_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
+            echo "ARM_TENANT_ID=${{ secrets.ARM_TENANT_ID }}" >> $GITHUB_ENV
+          elif [[ "$CLOUD_PROVIDER" == "gcp" ]]; then
+            echo "CONFLUENT_API_KEY=${{ secrets.CONFLUENT_API_KEY }}" >> $GITHUB_ENV
+            echo "CONFLUENT_API_SECRET=${{ secrets.CONFLUENT_API_SECRET }}" >> $GITHUB_ENV
+            echo "KAFKA_API_KEY=${{ secrets.KAFKA_API_KEY }}" >> $GITHUB_ENV
+            echo "KAFKA_API_SECRET=${{ secrets.KAFKA_API_SECRET }}" >> $GITHUB_ENV
+            echo "KAFKA_CLUSTER_ID=${{ secrets.KAFKA_CLUSTER_ID }}" >> $GITHUB_ENV
+            echo "KAFKA_REST_ENDPOINT=${{ secrets.KAFKA_REST_ENDPOINT }}" >> $GITHUB_ENV
+            echo "GOOGLE_CREDENTIALS=${{ secrets.GOOGLE_CREDENTIALS }}" >> $GITHUB_ENV
+            echo "GCP_BUCKET_NAME=${{ secrets.GCP_BUCKET_NAME }}" >> $GITHUB_ENV
+          elif [[ "$CLOUD_PROVIDER" == "aws" ]]; then
+            echo "CONFLUENT_API_KEY=${{ secrets.CONFLUENT_API_KEY }}" >> $GITHUB_ENV
+            echo "CONFLUENT_API_SECRET=${{ secrets.CONFLUENT_API_SECRET }}" >> $GITHUB_ENV
+            echo "KAFKA_API_KEY=${{ secrets.KAFKA_API_KEY }}" >> $GITHUB_ENV
+            echo "KAFKA_API_SECRET=${{ secrets.KAFKA_API_SECRET }}" >> $GITHUB_ENV
+            echo "KAFKA_CLUSTER_ID=${{ secrets.KAFKA_CLUSTER_ID }}" >> $GITHUB_ENV
+            echo "KAFKA_REST_ENDPOINT=${{ secrets.KAFKA_REST_ENDPOINT }}" >> $GITHUB_ENV
+            echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+            echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+            echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV
+            echo "S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}" >> $GITHUB_ENV
+          else
+            echo "Unsupported cloud provider: $CLOUD_PROVIDER"
+            exit 1
+          fi
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+      
+      - name: Install Terragrunt
+        run: |
+          wget -q https://github.com/gruntwork-io/terragrunt/releases/download/v0.56.3/terragrunt_linux_amd64
+          chmod +x terragrunt_linux_amd64
+          sudo mv terragrunt_linux_amd64 /usr/local/bin/terragrunt
+
+      - name: Terragrunt Init
+        working-directory: client-config-repo/${{ env.DIR_PATH }}
+        run: terragrunt init
+
+      - name: Determine if migration is required and run scripts
+        id: detect
+        working-directory: client-config-repo/${{ env.DIR_PATH }}
+        run: |
+          echo "Reading use_pipeline_version from terragrunt output..."
+          ACTUAL_VERSION=$(terragrunt output -raw use_pipeline_version)
+          echo "Terragrunt says use_pipeline_version = $ACTUAL_VERSION"
+          echo "Prior pipeline version = $PRIOR_PIPELINE_VERSION"
+
+          if [[ "$ACTUAL_VERSION" == "$PRIOR_PIPELINE_VERSION" ]]; then
+            mkdir -p client-config-repo/migration
+            cp -r iac_repo/migration/* client-config-repo/migration/
+            MIGRATION_SCRIPT=client-config-repo/migration/${{ inputs.prior_pipeline_version }}_to_${{ inputs.use_pipeline_version }}.sh
+            if [[ -f "$MIGRATION_SCRIPT" ]]; then
+              bash "$MIGRATION_SCRIPT"
+            else
+              echo "No migration script found. Skipping."
+            fi
+          else
+            echo "The prior pipeline version from input file doesnt match the output from Terraform state file."
+          fi
+          
   terragrunt-plan:
     name: Terragrunt Plan
     runs-on: ubuntu-latest
