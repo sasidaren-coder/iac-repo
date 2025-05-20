@@ -13,7 +13,7 @@ locals {
   topic_name       = local.topic_config_raw.topic.name
 
   # Extract Pipeline version
-  iac_version    = local.topic_config_raw.pipeline_version
+  iac_version    = local.topic_config_raw.use_pipeline_version
 }
 
 terraform {
@@ -51,7 +51,7 @@ terraform {
     resource_group_name  = "${get_env("AZURE_RESOURCE_GROUP_NAME", "psy-flink-poc")}"
     storage_account_name = "${get_env("AZURE_STORAGE_ACCOUNT_NAME", "psyflinkops")}"
     container_name       = "${get_env("AZURE_STORAGE_CONTAINER_NAME", "psyflinkcontainer")}"
-    key                  = "${local.env}/${local.iac_version}/topics/${local.topic_name}.tfstate"
+    key                  = "${local.env}/topics/${local.topic_name}.tfstate"
   }
 }
 EOF
